@@ -45,7 +45,7 @@ def pick_best(machines):
     N = machines[0].N
     best = [0,0]
     for index, machine in enumerate(machines):
-        while True:
+        while True: # this loop is very slow if the distribution is narrow.
             x, y = randint(0,N-1), random()
             if y <= machine.distribution[x]:
                 best = [index, x] if x > best[1] else best
@@ -90,7 +90,7 @@ def main(n, iterations, sample_rate, tick_rate, hide_history):
 if __name__ == "__main__":
 
     n = 9 # number of machines at once
-    iterations = 200 # iteration will stop after this many plays.
+    iterations = 100 # iteration will stop after this many plays.
     tick_rate = 0.05 # time in seconds between ticks.
     sample_rate = 200 # granularity of the functions. higher is more precise.
     hide_history = True # only show one curve at a time for each plot.
