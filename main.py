@@ -62,8 +62,7 @@ def main(n, iterations, sample_rate, tick_rate, hide_history):
     machines = [Machine(intervals) for x in range(n)]
     machine_pos = gen_grid(n)
     plot_size = math.ceil(math.sqrt(n))
-    figure, ax = plt.subplots(plot_size, plot_size, num="Solver")
-    figure.suptitle("Multi-arm bandit solver")
+    figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
 
     loops = iterations
     c=0
@@ -85,12 +84,41 @@ def main(n, iterations, sample_rate, tick_rate, hide_history):
 
         c+=1
 
+        figure.suptitle(f"Iteration {c}")
+
+    plt.show()
+
+def main_not_animated(n, iterations, sample_rate, tick_rate, hide_history):
+
+    intervals = sample_rate # how many points we approximate the distributions on.
+    tick_rate = tick_rate
+    X = np.linspace(0,1,intervals)
+    
+    # a single machine: (intervals x Y values, true probability, total plays, # of successes)
+    machines = [Machine(intervals) for x in range(n)]
+    machine_pos = gen_grid(n)
+    plot_size = math.ceil(math.sqrt(n))
+    figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
+
+    # iterate the machines.
+    loops = iterations
+    for i in range(loops):
+        for machine, pos in zip(machines, machine_pos):
+            machines[pick_best(machines)].trial()
+
+    # draw results.
+    for machine, pos in zip(machines, machine_pos):
+        ax[pos[0], pos[1]].plot(X, machine.distribution)
+        ax[pos[0], pos[1]].set_yticks([])
+        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
+        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}")
+    
     plt.show()
 
 if __name__ == "__main__":
 
     n = 9 # number of machines at once
-    iterations = 100 # iteration will stop after this many plays.
+    iterations = 200 # iteration will stop after this many plays.
     tick_rate = 0.05 # time in seconds between ticks.
     sample_rate = 200 # granularity of the functions. higher is more precise.
     hide_history = True # only show one curve at a time for each plot.
