@@ -2,7 +2,7 @@ from random import randint, random
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from IPython.display import display, clear_output
+from IPython.display import clear_output
 
 class Machine:
 
@@ -52,7 +52,7 @@ def pick_best(machines):
                 break
     return best[0]
 
-def main(n, iterations, sample_rate, tick_rate):
+def main(n, iterations, sample_rate, tick_rate, hide_history):
 
     intervals = sample_rate # how many points we approximate the distributions on.
     tick_rate = tick_rate
@@ -72,7 +72,7 @@ def main(n, iterations, sample_rate, tick_rate):
         for machine, pos in zip(machines, machine_pos):
             
             # comment this line if you want the history of the curves to show.
-            if show_history:
+            if hide_history:
                 ax[pos[0], pos[1]].clear()
             ax[pos[0], pos[1]].plot(X, machine.distribution)
             ax[pos[0], pos[1]].set_yticks([])
@@ -93,5 +93,5 @@ if __name__ == "__main__":
     iterations = 200 # iteration will stop after this many plays.
     tick_rate = 0.05 # time in seconds between ticks.
     sample_rate = 200 # granularity of the functions. higher is more precise.
-    show_history = False # show all curves at once through time.
-    main(n, iterations, sample_rate, tick_rate, show_history)
+    hide_history = True # only show one curve at a time for each plot.
+    main(n, iterations, sample_rate, tick_rate, hide_history)
