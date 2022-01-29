@@ -9,6 +9,7 @@ class Machine:
     def __init__(self, N, probability):
         self.N = N
         self.distribution = generate_beta(N=self.N)
+        self.peak = 1
         self.trials = 0
         self.successes = 0
         self.probability = probability
@@ -16,7 +17,10 @@ class Machine:
         self.estimate = 0.5
 
     def get_estimate(self):
-        self.estimate = np.argmax(self.distribution, axis=0) / self.N
+        x_of_largest = np.argmax(self.distribution, axis=0)
+        self.estimate = x_of_largest / self.N
+        self.peak = self.distribution[x_of_largest]
+        self.area_proportion = 1 / self.peak
 
     def trial(self):
         self.trials += 1
@@ -46,7 +50,7 @@ def pick_best(machines):
     best = [0,0]
     for index, machine in enumerate(machines):
         while True: # this loop is very slow if the distribution is narrow.
-            x, y = randint(0,N-1), random()
+            x, y = randint(0,N-1), random() * machine.estimate
             if y <= machine.distribution[x]:
                 best = [index, x] if x > best[1] else best
                 break
@@ -84,7 +88,7 @@ def main(iterations, sample_rate):
         ax[pos[0], pos[1]].plot(X, machine.distribution)
         ax[pos[0], pos[1]].set_yticks([])
         ax[pos[0], pos[1]].set_xticks([])
-        # ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
+        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
         ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}")
     
     plt.show()
