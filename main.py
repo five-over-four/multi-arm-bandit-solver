@@ -127,4 +127,21 @@ if __name__ == "__main__":
     tick_rate = 0.05 # time in seconds between ticks.
     sample_rate = 200 # granularity of the functions. higher is more precise.
     hide_history = True # only show one curve at a time for each plot.
-    main(n, iterations, sample_rate, tick_rate, hide_history)
+    animated = True # by default.
+
+    if input("Multi-arm Bandit Solver.\n=====================\nPress enter to input settings,\nwrite 'default' to use default settings.\n>").lower() == "default":
+        main(n, iterations, sample_rate, tick_rate, hide_history)
+    
+    choices = {n: input("number of machines? (at least 2) "), iterations: input("iterations? "), sample_rate: input("sample rate? (100-200+ recommended) "), animated: input("animated? y/n ")}
+    if choices[animated][0].lower() == "y":
+        hide_history = (input("show history? y/n ")[0].lower() == "n")
+    else:
+        animated = False
+    n = int(choices[n].strip())
+    iterations = int(choices[iterations].strip())
+    sample_rate = int(choices[sample_rate].strip())
+
+    if animated:
+        main(n, iterations, sample_rate, tick_rate, hide_history)
+    else:
+        main_not_animated(n, iterations, sample_rate)
