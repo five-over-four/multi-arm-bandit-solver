@@ -2,7 +2,6 @@ from random import randint, random
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from IPython.display import clear_output
 
 class Machine:
 
@@ -60,6 +59,8 @@ def pick_best(machines):
     return best[0]
 
 def main(n, iterations, sample_rate, tick_rate, hide_history):
+
+    from IPython.display import clear_output
 
     intervals = sample_rate # how many points we approximate the distributions on.
     tick_rate = tick_rate
