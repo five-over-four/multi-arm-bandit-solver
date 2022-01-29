@@ -38,7 +38,7 @@ def binomial(n, k, x):
 # generates a *numerically* normalised beta distribution.
 def generate_beta(total=0, success=0, N=100):
     unnormalised = binomial(total, success, np.linspace(0,1,N))
-    return unnormalised / sum(unnormalised * (1 / N))
+    return unnormalised / sum(unnormalised) / N
 
 # generates the plot grid setup.
 def gen_grid(n):
