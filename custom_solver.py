@@ -39,7 +39,7 @@ def generate_beta(total=0, success=0, N=100):
 
 # generates the plot grid setup.
 def gen_grid(n):
-    for i in range(1,10):
+    for i in range(1,1000):
         if i**2 >= n:
             return [(x,y) for x in range(i) for y in range(i)][:n]
 
@@ -65,6 +65,7 @@ def main(iterations, sample_rate):
     
     else:
         print("data.txt not found. quitting.")
+        return -1
 
     X = np.linspace(0,1,sample_rate)
     
@@ -83,8 +84,9 @@ def main(iterations, sample_rate):
         ax[pos[0], pos[1]].plot(X, machine.distribution)
         ax[pos[0], pos[1]].set_yticks([])
         ax[pos[0], pos[1]].set_xticks([])
-        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
-        ax[pos[0], pos[1]].set_title(f"p = {str(machine.probability)[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
+        if n < 40: # don't draw labels if there's waaaay too many plots
+            ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
+            ax[pos[0], pos[1]].set_title(f"p = {str(machine.probability)[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
     
     plt.show()
 
