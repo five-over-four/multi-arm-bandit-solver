@@ -74,17 +74,20 @@ def main(iterations, sample_rate):
     plot_size = math.ceil(math.sqrt(n))
     figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
 
+    # sort the machines by probability for easier viewing.
+    machines.sort(reverse=True, key=lambda a: a.probability)
+
     # iterate the machines.
     for i in range(iterations):
         machines[pick_best(machines)].trial()
-
+    
     # draw results.
     for machine, pos in zip(machines, machine_pos):
         machine.get_estimate()
-        ax[pos[0], pos[1]].plot(X, machine.distribution)
+        ax[pos[0], pos[1]].plot(X, machine.distribution, "b")
         ax[pos[0], pos[1]].set_yticks([])
         ax[pos[0], pos[1]].set_xticks([])
-        if n < 40: # don't draw labels if there's waaaay too many plots
+        if n <= 40: # don't draw labels if there's waaaay too many plots
             ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
             ax[pos[0], pos[1]].set_title(f"p = {str(machine.probability)[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
     

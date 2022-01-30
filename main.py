@@ -1,6 +1,7 @@
-from random import randint, random
 import matplotlib.pyplot as plt
+from IPython.display import clear_output
 import numpy as np
+from random import randint, random
 import math
 import json
 import os
@@ -26,7 +27,6 @@ class Settings:
                 self.plays_per_iteration = s["plays_per_iteration"]
                 self.tick_rate = s["tick_rate"]
                 self.sample_rate = s["sample_rate"]
-                self.animated = bool(int(s["animated"]))
                 self.hide_history = bool(int(s["hide_history"]))
             except:
                 print("erroneous settings. loading defaults...")
@@ -40,7 +40,6 @@ class Settings:
         self.plays_per_iteration = self.n
         self.tick_rate = 0.05
         self.sample_rate = 200
-        self.animated = True
         self.hide_history = True
 
 # globally accessible.
@@ -81,7 +80,6 @@ def save_defaults():
         config["plays_per_iteration"] = settings.plays_per_iteration
         config["tick_rate"] = settings.tick_rate
         config["sample_rate"] = settings.sample_rate
-        config["animated"] = int(settings.animated)
         config["hide_history"] = int(settings.hide_history)
     with open(settings.config_file, "w") as file:
         json.dump(config, file, indent=2)
@@ -113,15 +111,15 @@ def pick_best(machines):
 
 def main():
 
-    # this is only needed to animate the plots.
-    from IPython.display import clear_output
-
     X = np.linspace(0, 1, settings.sample_rate)
     
     machines = [Machine(settings.sample_rate) for x in range(settings.n)]
     machine_pos = gen_grid(settings.n)
     plot_size = math.ceil(math.sqrt(settings.n))
     figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
+
+    # sorting the machines makes it easier to conceptualise how the convergence happens.
+    machines.sort(reverse=True, key=lambda a: a.probability)
 
     # draw first all the initial plots.
     for machine, pos in zip(machines, machine_pos):
@@ -156,30 +154,6 @@ def main():
 
     plt.show()
 
-# much faster- computes all end-results and draws plots.
-def main_not_animated():
-
-    X = np.linspace(0, 1, settings.sample_rate)
-    
-    machines = [Machine(settings.sample_rate) for x in range(settings.n)]
-    machine_pos = gen_grid(settings.n)
-    plot_size = math.ceil(math.sqrt(settings.n))
-    figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
-
-    # iterate the machines.
-    for i in range(settings.iterations * settings.plays_per_iteration):
-        machines[pick_best(machines)].trial()
-
-    # draw results.
-    for machine, pos in zip(machines, machine_pos):
-        ax[pos[0], pos[1]].plot(X, machine.distribution)
-        ax[pos[0], pos[1]].set_yticks([])
-        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
-        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
-    
-    figure.suptitle(f"Iterations: {str(settings.iterations)}")
-    plt.show()
-
 if __name__ == "__main__":
 
     if input("Multi-arm Bandit Solver.\n=====================\nuse default settings? y/n ")[0].lower() == "y":
@@ -189,14 +163,10 @@ if __name__ == "__main__":
                 "plays_per_iteration": input("plays per iteration? (at least 1) "), 
                 "iterations": input("total iterations? "), 
                 "sample_rate": input("sample rate? (100-200+ recommended) "),
-                "animated": input("animated? y/n ")}
+                }
 
-    if choices["animated"][0].lower() == "y":
-        settings.tick_rate = float(input("tick rate? (in seconds) "))
-        settings.hide_history = (input("show history? y/n ")[0].lower() == "n")
-        settings.animated = True
-    else:
-        settings.animated = False
+    settings.tick_rate = float(input("tick rate? (in seconds) "))
+    settings.hide_history = (input("show history? y/n ")[0].lower() == "n")
 
     # rest of the settings set.
     settings.n = int(choices["n"].strip())
@@ -206,8 +176,4 @@ if __name__ == "__main__":
 
     # update defaults.json here.
     save_defaults()
-
-    if settings.animated:
-        main()
-    else:
-        main_not_animated()
+    main()

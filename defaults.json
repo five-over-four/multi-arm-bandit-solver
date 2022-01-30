@@ -4,6 +4,5 @@
     "plays_per_iteration": 9,
     "tick_rate": 0.05,
     "sample_rate": 200,
-    "animated": 1,
     "hide_history": 1
 }
