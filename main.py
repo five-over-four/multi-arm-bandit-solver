@@ -93,7 +93,7 @@ def binomial(n, k, x):
 # generates a *numerically* normalised beta distribution.
 def generate_beta(total=0, success=0, N=100):
     unnormalised = binomial(total, success, np.linspace(0,1,N))
-    return unnormalised * N / sum(unnormalised)
+    return unnormalised * N / np.sum(unnormalised)
 
 # generates the plot grid setup.
 def gen_grid(n):
@@ -105,7 +105,7 @@ def pick_best(machines):
     best = [0,0]
     for index, machine in enumerate(machines):
         while True: # this loop is very slow if the distribution is narrow.
-            x, y = randint(0,settings.n-1), (random() * machine.peak)
+            x, y = randint(0,settings.sample_rate-1), random() * machine.peak
             if y <= machine.distribution[x]:
                 best = [index, x] if x > best[1] else best
                 break
