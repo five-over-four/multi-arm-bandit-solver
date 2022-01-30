@@ -2,14 +2,58 @@ from random import randint, random
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import json
+import os
 
+# loads the .json data in.
+class Settings:
+    def __init__(self):
+        self.path = os.path.dirname(os.path.realpath(__file__))
+        self.directory = os.listdir(self.path)
+        if "dev_defaults.json" in self.directory:
+            self.config_file = self.path + "/dev_defaults.json"
+        elif "defaults.json" in self.directory:
+            self.config_file = self.path + "/defaults.json"
+        
+    def load_custom_settings(self):
+        if self.config_file != None:
+            with open(self.config_file) as file:
+                data = file.read()
+            s = json.loads(data)
+            try:
+                self.n = s["number_of_machines"]
+                self.iterations = s["iterations"]
+                self.plays_per_iteration = s["plays_per_iteration"]
+                self.tick_rate = s["tick_rate"]
+                self.sample_rate = s["sample_rate"]
+                self.animated = bool(int(s["animated"]))
+                self.hide_history = bool(int(s["hide_history"]))
+            except:
+                print("erroneous settings. loading defaults...")
+                self.load_defaults()
+        else:
+            self.load_defaults()
+    
+    def load_defaults(self):
+        self.n = 9
+        self.iterations = 200
+        self.plays_per_iteration = self.n
+        self.tick_rate = 0.05
+        self.sample_rate = 200
+        self.animated = True
+        self.hide_history = True
+
+# globally accessible.
+settings = Settings()
+settings.load_custom_settings()
+
+# models a single slot machine.
 class Machine:
 
     def __init__(self, N):
         self.N = N
         self.distribution = generate_beta(N=self.N)
         self.peak = 1
-        self.area_proportion = 1 # graph area / plot area = 1 / self.peak.
         self.trials = 0
         self.successes = 0
         self.probability = random()
@@ -20,7 +64,6 @@ class Machine:
         x_of_largest = np.argmax(self.distribution, axis=0)
         self.estimate = x_of_largest / self.N
         self.peak = self.distribution[x_of_largest]
-        self.area_proportion = 1 / self.peak
 
     def trial(self):
         self.trials += 1
@@ -29,6 +72,19 @@ class Machine:
         self.distribution = generate_beta(total=self.trials, success=self.successes, N=self.N)
         self.get_estimate()
 
+# saves new settings into defaults.json (or dev_defaults.json)
+def save_defaults():
+    with open(settings.config_file, "r+") as file:
+        config = json.load(file)
+        config["number_of_machines"] = settings.n
+        config["iterations"] = settings.iterations
+        config["plays_per_iteration"] = settings.plays_per_iteration
+        config["tick_rate"] = settings.tick_rate
+        config["sample_rate"] = settings.sample_rate
+        config["animated"] = int(settings.animated)
+        config["hide_history"] = int(settings.hide_history)
+    with open(settings.config_file, "w") as file:
+        json.dump(config, file, indent=2)
 
 # Bin(n,p) point probabilities for probability x.
 def binomial(n, k, x):
@@ -37,7 +93,7 @@ def binomial(n, k, x):
 # generates a *numerically* normalised beta distribution.
 def generate_beta(total=0, success=0, N=100):
     unnormalised = binomial(total, success, np.linspace(0,1,N))
-    return unnormalised / sum(unnormalised) / N
+    return unnormalised * N / sum(unnormalised)
 
 # generates the plot grid setup.
 def gen_grid(n):
@@ -46,103 +102,112 @@ def gen_grid(n):
             return [(x,y) for x in range(i) for y in range(i)][:n]
 
 def pick_best(machines):
-    N = machines[0].N
     best = [0,0]
-    c = 0
     for index, machine in enumerate(machines):
         while True: # this loop is very slow if the distribution is narrow.
-            c += 1
-            x, y = randint(0,N-1), (random() * machine.peak)
+            x, y = randint(0,settings.n-1), (random() * machine.peak)
             if y <= machine.distribution[x]:
                 best = [index, x] if x > best[1] else best
                 break
     return best[0]
 
-def main(n, iterations, sample_rate, tick_rate, hide_history):
+def main():
 
+    # this is only needed to animate the plots.
     from IPython.display import clear_output
 
-    intervals = sample_rate # how many points we approximate the distributions on.
-    tick_rate = tick_rate
-    X = np.linspace(0,1,intervals)
+    X = np.linspace(0, 1, settings.sample_rate)
     
-    machines = [Machine(intervals) for x in range(n)]
-    machine_pos = gen_grid(n)
-    plot_size = math.ceil(math.sqrt(n))
+    machines = [Machine(settings.sample_rate) for x in range(settings.n)]
+    machine_pos = gen_grid(settings.n)
+    plot_size = math.ceil(math.sqrt(settings.n))
     figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
 
-    loops = iterations
-    c=0
-    while c < loops:
+    # draw first all the initial plots.
+    for machine, pos in zip(machines, machine_pos):
+        ax[pos[0], pos[1]].plot(X, machine.distribution)
+        ax[pos[0], pos[1]].set_yticks([])
+        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
+        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
 
-        for machine, pos in zip(machines, machine_pos):
-            
-            if hide_history:
-                ax[pos[0], pos[1]].clear()
+    for i in range(settings.iterations):
+
+        # so we only draw plots that *change*. saves a lot of computing power.
+        machines_played_this_round = []
+        figure.suptitle(f"Iteration {i+1}")
+
+        # first play all the games for this iteration.
+        for i in range(settings.plays_per_iteration):
+            best_machine_index = pick_best(machines)
+            machines_played_this_round.append(best_machine_index)
+            machines[best_machine_index].trial()
+
+        # draw relevant plots.
+        for (machine, pos) in [(machines[index], machine_pos[index]) for index in machines_played_this_round]:
+            if settings.hide_history:
+                ax[pos[0], pos[1]].clear() # this is stupidly slow.
             ax[pos[0], pos[1]].plot(X, machine.distribution)
             ax[pos[0], pos[1]].set_yticks([])
             ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
-            ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}")
-            machines[pick_best(machines)].trial()
-        
+            ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
+
         clear_output(wait=True)
-        plt.pause(tick_rate)
-
-        c+=1
-
-        figure.suptitle(f"Iteration {c}")
+        plt.pause(settings.tick_rate)
 
     plt.show()
 
-# much faster- computes all end-results and prints out graph.
-def main_not_animated(n, iterations, sample_rate):
+# much faster- computes all end-results and draws plots.
+def main_not_animated():
 
-    intervals = sample_rate # how many points we approximate the distributions on.
-    X = np.linspace(0,1,intervals)
+    X = np.linspace(0, 1, settings.sample_rate)
     
-    # a single machine: (intervals x Y values, true probability, total plays, # of successes)
-    machines = [Machine(intervals) for x in range(n)]
-    machine_pos = gen_grid(n)
-    plot_size = math.ceil(math.sqrt(n))
+    machines = [Machine(settings.sample_rate) for x in range(settings.n)]
+    machine_pos = gen_grid(settings.n)
+    plot_size = math.ceil(math.sqrt(settings.n))
     figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
 
     # iterate the machines.
-    loops = iterations
-    for i in range(loops):
-        for machine, pos in zip(machines, machine_pos):
-            machines[pick_best(machines)].trial()
+    for i in range(settings.iterations * settings.plays_per_iteration):
+        machines[pick_best(machines)].trial()
 
     # draw results.
     for machine, pos in zip(machines, machine_pos):
         ax[pos[0], pos[1]].plot(X, machine.distribution)
         ax[pos[0], pos[1]].set_yticks([])
-        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
-        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}")
+        ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)
+        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
     
+    figure.suptitle(f"Iterations: {str(settings.iterations)}")
     plt.show()
 
 if __name__ == "__main__":
 
-    n = 9 # number of machines at once
-    iterations = 200 # iteration will stop after this many plays.
-    tick_rate = 0.05 # time in seconds between ticks.
-    sample_rate = 200 # granularity of the functions. higher is more precise.
-    hide_history = True # only show one curve at a time for each plot.
-    animated = True # by default.
-
-    if input("Multi-arm Bandit Solver.\n=====================\nPress enter to input settings,\nwrite 'default' to use default settings.\n>").lower() == "default":
-        main(n, iterations, sample_rate, tick_rate, hide_history)
+    if input("Multi-arm Bandit Solver.\n=====================\nuse default settings? y/n ")[0].lower() == "y":
+        main()
     
-    choices = {n: input("number of machines? (at least 2) "), iterations: input("iterations? "), sample_rate: input("sample rate? (100-200+ recommended) "), animated: input("animated? y/n ")}
-    if choices[animated][0].lower() == "y":
-        hide_history = (input("show history? y/n ")[0].lower() == "n")
-    else:
-        animated = False
-    n = int(choices[n].strip())
-    iterations = int(choices[iterations].strip())
-    sample_rate = int(choices[sample_rate].strip())
+    choices = {"n": input("number of machines? (at least 2) "), 
+                "plays_per_iteration": input("plays per iteration? (at least 1) "), 
+                "iterations": input("total iterations? "), 
+                "sample_rate": input("sample rate? (100-200+ recommended) "),
+                "animated": input("animated? y/n ")}
 
-    if animated:
-        main(n, iterations, sample_rate, tick_rate, hide_history)
+    if choices["animated"][0].lower() == "y":
+        settings.tick_rate = float(input("tick rate? (in seconds) "))
+        settings.hide_history = (input("show history? y/n ")[0].lower() == "n")
+        settings.animated = True
     else:
-        main_not_animated(n, iterations, sample_rate)
+        settings.animated = False
+
+    # rest of the settings set.
+    settings.n = int(choices["n"].strip())
+    settings.iterations = int(choices["iterations"].strip())
+    settings.sample_rate = int(choices["sample_rate"].strip())
+    settings.plays_per_iteration = int(choices["plays_per_iteration"].strip())
+
+    # update defaults.json here.
+    save_defaults()
+
+    if settings.animated:
+        main()
+    else:
+        main_not_animated()

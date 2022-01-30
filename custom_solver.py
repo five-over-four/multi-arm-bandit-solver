@@ -6,27 +6,25 @@ import os
 
 class Machine:
 
-    def __init__(self, N, probability):
-        self.N = N
-        self.distribution = generate_beta(N=self.N)
+    def __init__(self, sample_rate, probability):
+        self.sample_rate = sample_rate
+        self.distribution = generate_beta(N=self.sample_rate)
         self.peak = 1
         self.trials = 0
         self.successes = 0
         self.probability = probability
-        self.p = str(self.probability)
         self.estimate = 0.5
 
     def get_estimate(self):
         x_of_largest = np.argmax(self.distribution, axis=0)
-        self.estimate = x_of_largest / self.N
+        self.estimate = x_of_largest / self.sample_rate
         self.peak = self.distribution[x_of_largest]
-        self.area_proportion = 1 / self.peak
 
     def trial(self):
         self.trials += 1
         if random() <= self.probability:
             self.successes += 1
-        self.distribution = generate_beta(total=self.trials, success=self.successes, N=self.N)
+        self.distribution = generate_beta(total=self.trials, success=self.successes, N=self.sample_rate)
         self.get_estimate()
 
 
@@ -37,7 +35,7 @@ def binomial(n, k, x):
 # generates a *numerically* normalised beta distribution. note the numerical integration in return statement.
 def generate_beta(total=0, success=0, N=100):
     unnormalised = binomial(total, success, np.linspace(0,1,N))
-    return unnormalised / sum(unnormalised) / N
+    return unnormalised * N / sum(unnormalised)
 
 # generates the plot grid setup.
 def gen_grid(n):
@@ -46,11 +44,11 @@ def gen_grid(n):
             return [(x,y) for x in range(i) for y in range(i)][:n]
 
 def pick_best(machines):
-    N = machines[0].N
+    N = machines[0].sample_rate
     best = [0,0]
     for index, machine in enumerate(machines):
         while True: # this loop is very slow if the distribution is narrow.
-            x, y = randint(0,N-1), random() * machine.estimate
+            x, y = randint(0,N-1), random() * machine.peak
             if y <= machine.distribution[x]:
                 best = [index, x] if x > best[1] else best
                 break
@@ -68,28 +66,25 @@ def main(iterations, sample_rate):
     else:
         print("data.txt not found. quitting.")
 
-    intervals = sample_rate # how many points we approximate the distributions on.
-    X = np.linspace(0,1,intervals)
+    X = np.linspace(0,1,sample_rate)
     
-    # a single machine: (intervals x Y values, true probability, total plays, # of successes)
-    machines = [Machine(intervals, probability) for probability in data]
+    machines = [Machine(sample_rate, probability) for probability in data]
     machine_pos = gen_grid(n)
     plot_size = math.ceil(math.sqrt(n))
     figure, ax = plt.subplots(plot_size, plot_size, num="Multi-arm bandit solver")
 
     # iterate the machines.
-    loops = iterations
-    for i in range(loops):
-        for machine, pos in zip(machines, machine_pos):
-            machines[pick_best(machines)].trial()
+    for i in range(iterations):
+        machines[pick_best(machines)].trial()
 
     # draw results.
     for machine, pos in zip(machines, machine_pos):
+        machine.get_estimate()
         ax[pos[0], pos[1]].plot(X, machine.distribution)
         ax[pos[0], pos[1]].set_yticks([])
         ax[pos[0], pos[1]].set_xticks([])
         ax[pos[0], pos[1]].tick_params(axis="x",direction="in", pad=-15)   
-        ax[pos[0], pos[1]].set_title(f"p = {machine.p[:6]}, est = {str(machine.estimate)[:6]}")
+        ax[pos[0], pos[1]].set_title(f"p = {str(machine.probability)[:6]}, est = {str(machine.estimate)[:6]}", fontsize=10)
     
     plt.show()
 
