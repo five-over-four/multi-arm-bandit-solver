@@ -95,6 +95,13 @@ def main(iterations, sample_rate):
 
 if __name__ == "__main__":
 
-    iterations = int(input("How many iterations?")) # total number 
-    sample_rate = int(input("Sample rate? Higher is better."))
+    while True:
+        try:
+            iterations = int(input("How many iterations?")) # total number 
+            sample_rate = int(input("Sample rate? Higher is better."))
+            break
+        except:
+            print("Erroneous inputs, try again.")
+            continue
+        
     main(iterations, sample_rate)

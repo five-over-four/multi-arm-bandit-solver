@@ -158,21 +158,28 @@ if __name__ == "__main__":
 
     if input("Multi-arm Bandit Solver.\n=====================\nuse default settings? y/n ")[0].lower() == "y":
         main()
-    
-    choices = {"n": input("number of machines? (at least 2) "), 
-                "plays_per_iteration": input("plays per iteration? (at least 1) "), 
-                "iterations": input("total iterations? "), 
-                "sample_rate": input("sample rate? (100-200+ recommended) "),
-                }
 
-    settings.tick_rate = float(input("tick rate? (in seconds) "))
-    settings.hide_history = (input("show history? y/n ")[0].lower() == "n")
+    # extremely rudimentary error-handling.
+    while True:
+        try:
+            choices = {"n": input("number of machines? (at least 2) "), 
+                    "plays_per_iteration": input("plays per iteration? (at least 1) "), 
+                    "iterations": input("total iterations? "), 
+                    "sample_rate": input("sample rate? (100-200+ recommended) "),
+                    }
 
-    # rest of the settings set.
-    settings.n = int(choices["n"].strip())
-    settings.iterations = int(choices["iterations"].strip())
-    settings.sample_rate = int(choices["sample_rate"].strip())
-    settings.plays_per_iteration = int(choices["plays_per_iteration"].strip())
+            settings.tick_rate = float(input("tick rate? (in seconds) "))
+            settings.hide_history = (input("show history? y/n ")[0].lower() == "n")
+
+            # rest of the settings set.
+            settings.n = int(choices["n"].strip())
+            settings.iterations = int(choices["iterations"].strip())
+            settings.sample_rate = int(choices["sample_rate"].strip())
+            settings.plays_per_iteration = int(choices["plays_per_iteration"].strip())
+            break
+        except:
+            print("at least one of the given values was of the incorrect format.")
+            continue
 
     # update defaults.json here.
     save_defaults()
